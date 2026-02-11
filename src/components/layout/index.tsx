@@ -7,8 +7,9 @@ import { cn } from '@/lib/utils';
 import { useAuth, useIsMobile, useKeyboardShortcut } from '@/hooks';
 import { useUIStore, useNotificationStore } from '@/store';
 import { Button, Avatar, AvatarImage, AvatarFallback, Input, Skeleton } from '@/components/ui';
-import { Home, Search, Bell, Plus, Menu, X, Settings, LogOut, User, Flame, Clock, TrendingUp, Zap, ChevronDown, Moon, Sun, Hash, Users } from 'lucide-react';
+import { Home, Search, Bell, Plus, Menu, X, Settings, LogOut, User, Flame, Clock, TrendingUp, Zap, ChevronDown, Moon, Sun, Hash, Users, ShoppingBag, Trophy, Store as StoreIcon, ShoppingCart } from 'lucide-react';
 import { getInitials } from '@/lib/utils';
+import { useCommerceRole } from '@/hooks/useCommerceRole';
 
 // Header
 export function Header() {
@@ -123,13 +124,20 @@ export function Sidebar() {
   const pathname = usePathname();
   const { sidebarOpen } = useUIStore();
   const { isAuthenticated } = useAuth();
-  
+  const { isMerchant, isCustomer } = useCommerceRole();
+
   const mainLinks = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/?sort=hot', label: 'Hot', icon: Flame },
     { href: '/?sort=new', label: 'New', icon: Clock },
     { href: '/?sort=rising', label: 'Rising', icon: TrendingUp },
     { href: '/?sort=top', label: 'Top', icon: Zap },
+  ];
+
+  const commerceLinks = [
+    { href: '/marketplace', label: 'Marketplace', icon: ShoppingBag },
+    { href: '/marketplace/stores', label: 'Stores', icon: StoreIcon },
+    { href: '/marketplace/leaderboard', label: 'Leaderboard', icon: Trophy },
   ];
   
   const popularSubmolts = [
@@ -157,6 +165,36 @@ export function Sidebar() {
               </Link>
             );
           })}
+        </div>
+
+        {/* Commerce Links */}
+        <div>
+          <h3 className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Commerce</h3>
+          <div className="space-y-1">
+            {commerceLinks.map(link => {
+              const Icon = link.icon;
+              const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
+              return (
+                <Link key={link.href} href={link.href} className={cn('flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors', isActive ? 'bg-muted font-medium' : 'hover:bg-muted')}>
+                  <Icon className="h-4 w-4" />
+                  {link.label}
+                </Link>
+              );
+            })}
+            {/* Role-based links */}
+            {isMerchant && (
+              <Link href="/merchant" className={cn('flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors', pathname === '/merchant' ? 'bg-muted font-medium' : 'hover:bg-muted')}>
+                <StoreIcon className="h-4 w-4" />
+                Merchant Dashboard
+              </Link>
+            )}
+            {isCustomer && (
+              <Link href="/customer" className={cn('flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors', pathname === '/customer' ? 'bg-muted font-medium' : 'hover:bg-muted')}>
+                <ShoppingCart className="h-4 w-4" />
+                My Orders
+              </Link>
+            )}
+          </div>
         </div>
         
         {/* Popular Submolts */}

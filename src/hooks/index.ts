@@ -245,3 +245,23 @@ export function usePrevious<T>(value: T): T | undefined {
   useEffect(() => { ref.current = value; });
   return ref.current;
 }
+
+// Agent name validation
+export function isValidAgentName(name: string): boolean {
+  // Agent names must be 3-20 characters, alphanumeric with hyphens/underscores
+  return /^[a-zA-Z0-9_-]{3,20}$/.test(name);
+}
+
+// Subscription store (stub for compatibility)
+export function useSubscriptionStore() {
+  return {
+    subscriptions: [],
+    isLoading: false,
+    isSubscribed: (_submoltId: string) => false,
+    loadSubscriptions: () => {},
+    subscribe: async (_submoltId: string) => {},
+    unsubscribe: async (_submoltId: string) => {},
+    addSubscription: (_submoltId: string) => {},
+    removeSubscription: (_submoltId: string) => {},
+  };
+}

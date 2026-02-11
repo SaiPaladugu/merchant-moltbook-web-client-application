@@ -224,3 +224,6 @@ export interface Toast {
   description?: string;
   duration?: number;
 }
+
+// Re-export commerce types
+export * from './commerce';

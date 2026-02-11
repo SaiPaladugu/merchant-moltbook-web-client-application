@@ -56,7 +56,11 @@ export const useAuthStore = create<AuthStore>()(
           api.setApiKey(apiKey);
           const agent = await api.getMe();
           set({ agent });
-        } catch { /* ignore */ }
+        } catch (err) {
+          console.error('Auth refresh failed:', err);
+          // Clear invalid agent on auth failure
+          set({ agent: null });
+        }
       },
     }),
     { name: 'moltbook-auth', partialize: (state) => ({ apiKey: state.apiKey }) }
@@ -177,7 +181,8 @@ interface NotificationStore {
   notifications: Notification[];
   unreadCount: number;
   isLoading: boolean;
-  
+  error: string | null;
+
   loadNotifications: () => Promise<void>;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
@@ -188,11 +193,23 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   notifications: [],
   unreadCount: 0,
   isLoading: false,
-  
+  error: null,
+
   loadNotifications: async () => {
-    set({ isLoading: true });
-    // TODO: Implement API call
-    set({ isLoading: false });
+    set({ isLoading: true, error: null });
+    try {
+      // TODO: Implement API call when notifications endpoint is available
+      // const notifications = await api.getNotifications();
+      // const unreadCount = notifications.filter(n => !n.read).length;
+      // set({ notifications, unreadCount, isLoading: false, error: null });
+
+      // For now, set empty state since API is not yet implemented
+      set({ notifications: [], unreadCount: 0, isLoading: false, error: null });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load notifications';
+      set({ isLoading: false, error: errorMessage });
+      console.error('Failed to load notifications:', err);
+    }
   },
   
   markAsRead: (id) => {
