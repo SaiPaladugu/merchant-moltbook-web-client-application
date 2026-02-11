@@ -1,65 +1,116 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { ListingGrid } from '@/components/commerce';
-import { useListingStore } from '@/store/commerce';
-import { Input, Button } from '@/components/ui';
-import { Search, SlidersHorizontal } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { useListings } from '@/hooks/commerce';
+import { transformApiListingToMarketplace } from '@/lib/marketplace-transformers';
+import { MarketplaceHeader } from '@/components/marketplace/marketplace-header';
+import { CategorySidebar } from '@/components/marketplace/category-sidebar';
+import { ListingCard } from '@/components/marketplace/listing-card';
+import { ListingDetail } from '@/components/marketplace/listing-detail';
+
+const categories = [
+  'All Categories',
+  'Electronics',
+  'Fashion',
+  'Home & Garden',
+  'Vehicles',
+  'Sports',
+  'Books',
+  'Toys',
+];
 
 export default function MarketplacePage() {
-  const { listings, isLoading, hasMore, loadListings, loadMore, setFilters } = useListingStore();
+  const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedListing, setSelectedListing] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadListings(true);
-  }, []);
+  // Real API integration
+  const { data: listingsData, error, isLoading } = useListings({
+    status: 'ACTIVE',
+    limit: 100
+  });
 
-  const handleSearch = () => {
-    if (!searchQuery.trim()) {
-      // Reset to all listings if search is empty
-      setFilters({});
-      return;
-    }
+  const transformedListings = useMemo(() => {
+    if (!listingsData?.data) return [];
+    return listingsData.data.map(listing =>
+      transformApiListingToMarketplace(listing)
+    );
+  }, [listingsData]);
 
-    // Apply search filter - this will trigger a reload through setFilters
-    setFilters({ search: searchQuery.trim() });
-  };
+  const filteredListings = useMemo(() => {
+    return transformedListings.filter((listing) => {
+      const matchesCategory =
+        selectedCategory === 'All Categories' ||
+        listing.category === selectedCategory;
+      const matchesSearch =
+        !searchQuery ||
+        listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        listing.description.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [transformedListings, selectedCategory, searchQuery]);
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading marketplace...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-red-500">
+        Error loading listings: {error.message}
+      </div>
+    );
+  }
+
+  const currentListing = selectedListing
+    ? filteredListings.find((l) => l.id === selectedListing)
+    : null;
 
   return (
-    <div className="container mx-auto py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold">Marketplace</h1>
-        <p className="mt-2 text-muted-foreground">
-          Discover amazing products from trusted merchants
-        </p>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="mb-8 flex gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search listings..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            className="pl-10"
-          />
-        </div>
-        <Button variant="outline" className="gap-2">
-          <SlidersHorizontal className="h-4 w-4" />
-          Filters
-        </Button>
-      </div>
-
-      {/* Listings Grid */}
-      <ListingGrid
-        listings={listings}
-        isLoading={isLoading}
-        hasMore={hasMore}
-        onLoadMore={loadMore}
+    <div className="min-h-screen bg-background">
+      <MarketplaceHeader
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
       />
+
+      <div className="flex">
+        {/* Sidebar */}
+        <CategorySidebar
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+        />
+
+        {/* Main content */}
+        <main className="flex-1 p-6">
+          {currentListing ? (
+            <ListingDetail
+              listing={currentListing}
+              onBack={() => setSelectedListing(null)}
+            />
+          ) : (
+            <>
+              <div className="mb-4 text-sm text-muted-foreground">
+                Showing {filteredListings.length} listing{filteredListings.length !== 1 ? 's' : ''}
+              </div>
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {filteredListings.map((listing) => (
+                  <ListingCard
+                    key={listing.id}
+                    listing={listing}
+                    onClick={() => setSelectedListing(listing.id)}
+                  />
+                ))}
+              </div>
+              {filteredListings.length === 0 && (
+                <div className="flex items-center justify-center py-12 text-muted-foreground">
+                  No listings found matching your criteria
+                </div>
+              )}
+            </>
+          )}
+        </main>
+      </div>
     </div>
   );
 }
